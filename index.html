@@ -12,8 +12,8 @@
     .camera-container { position: relative; width: 100%; max-width: 400px; aspect-ratio: 3/4; background: #000; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
     video { width: 100%; height: 100%; object-fit: cover; }
     
-    /* Приціл ROI */
-    .roi-target { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60px; height: 60px; border: 2px stroke #ef4444; border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45); pointer-events: none; transition: border-color 0.1s; }
+    /* Приціл ROI (Збільшено на 40%: 60px -> 84px) */
+    .roi-target { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 84px; height: 84px; border: 2px stroke #ef4444; border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45); pointer-events: none; transition: border-color 0.1s; }
     .roi-target.active { border-color: #22c55e; box-shadow: 0 0 15px #22c55e, 0 0 0 9999px rgba(0, 0, 0, 0.45); }
     
     .controls { width: 100%; max-width: 400px; background: #1e293b; border-radius: 16px; padding: 16px; margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
@@ -29,6 +29,9 @@
     
     button { background: #0284c7; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
     button:active { background: #0369a1; }
+
+    .btn-reset { background: #334155; color: #94a3b8; font-size: 0.9rem; padding: 10px; margin-top: 4px; }
+    .btn-reset:active { background: #475569; color: #fff; }
     
     canvas { display: none; }
   </style>
@@ -65,6 +68,8 @@
         <div id="interval-val" class="card-value">0.00 с</div>
       </div>
     </div>
+
+    <button id="reset-btn" class="btn-reset">Reset</button>
   </div>
 
   <canvas id="canvas"></canvas>
@@ -75,6 +80,7 @@
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     const roi = document.getElementById('roi');
     const startBtn = document.getElementById('start-btn');
+    const resetBtn = document.getElementById('reset-btn');
     const powerVal = document.getElementById('power-val');
     const intervalVal = document.getElementById('interval-val');
     const impConstantInput = document.getElementById('imp-constant');
@@ -107,12 +113,20 @@
       }
     });
 
+    resetBtn.addEventListener('click', () => {
+      flashCount = 0;
+      lastFlashTime = 0;
+      powerVal.innerText = '0.00 кВт';
+      intervalVal.innerText = '0.00 с';
+    });
+
     function processFrame() {
       if (!isTracking) return;
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      const roiSize = 60;
+      // Оновлений розмір зони аналізу ROI (84x84px)
+      const roiSize = 84;
       const startX = (canvas.width - roiSize) / 2;
       const startY = (canvas.height - roiSize) / 2;
 
@@ -168,7 +182,7 @@
           powerVal.innerText = `${Math.round(powerW)} Вт`;
         }
       } else {
-        intervalVal.innerText = `Чекаємо 2-й спалах...`;
+        intervalVal.innerText = `Чекаємо 2-й спалах... (#1)`;
       }
 
       lastFlashTime = now;
