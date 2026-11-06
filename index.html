@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Watt-counter</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 12px; }
+    h1 { font-size: 1.4rem; margin-bottom: 12px; text-align: center; color: #38bdf8; font-weight: 700; }
+    
+    .camera-container { position: relative; width: 100%; max-width: 400px; aspect-ratio: 3/4; background: #000; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    video { width: 100%; height: 100%; object-fit: cover; }
+    
+    /* Приціл ROI */
+    .roi-target { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 60px; height: 60px; border: 2px stroke #ef4444; border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45); pointer-events: none; transition: border-color 0.1s; }
+    .roi-target.active { border-color: #22c55e; box-shadow: 0 0 15px #22c55e, 0 0 0 9999px rgba(0, 0, 0, 0.45); }
+    
+    .controls { width: 100%; max-width: 400px; background: #1e293b; border-radius: 16px; padding: 16px; margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
+    .input-group { display: flex; justify-content: space-between; align-items: center; }
+    label { font-size: 0.9rem; color: #94a3b8; }
+    input { background: #0f172a; border: 1px solid #334155; color: #fff; padding: 8px 12px; border-radius: 8px; width: 100px; text-align: right; font-size: 1rem; }
+    
+    .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+    .card { background: #0f172a; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #334155; }
+    .card-title { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; }
+    .card-value { font-size: 1.4rem; font-weight: bold; color: #38bdf8; }
+    .card-value.highlight { color: #4ade80; }
+    
+    button { background: #0284c7; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
+    button:active { background: #0369a1; }
+    
+    canvas { display: none; }
+  </style>
+</head>
+<body>
+
+  <h1>Watt-counter</h1>
+
+  <div class="camera-container">
+    <video id="webcam" autoplay playsinline muted></video>
+    <div id="roi" class="roi-target"></div>
+  </div>
+
+  <div class="controls">
+    <button id="start-btn">Увімкнути камеру</button>
+    
+    <div class="input-group">
+      <label for="imp-constant">Константа (imp/кВт·год):</label>
+      <input type="number" id="imp-constant" value="6400">
+    </div>
+
+    <div class="input-group">
+      <label for="threshold-input">Поріг спалаху (%):</label>
+      <input type="number" id="threshold-input" value="25" min="5" max="100">
+    </div>
+
+    <div class="dashboard">
+      <div class="card">
+        <div class="card-title">Поточне навантаження</div>
+        <div id="power-val" class="card-value highlight">0.00 кВт</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Інтервал / Блимання</div>
+        <div id="interval-val" class="card-value">0.00 с</div>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <script>
+    const video = document.getElementById('webcam');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const roi = document.getElementById('roi');
+    const startBtn = document.getElementById('start-btn');
+    const powerVal = document.getElementById('power-val');
+    const intervalVal = document.getElementById('interval-val');
+    const impConstantInput = document.getElementById('imp-constant');
+    const thresholdInput = document.getElementById('threshold-input');
+
+    let isTracking = false;
+    let lastFlashTime = 0;
+    let baseLuminance = 0;
+    let isLedOn = false;
+    let flashCount = 0;
+
+    startBtn.addEventListener('click', async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { exact: 'environment' } }
+        }).catch(() => {
+          return navigator.mediaDevices.getUserMedia({ video: true });
+        });
+
+        video.srcObject = stream;
+        startBtn.style.display = 'none';
+        video.onloadedmetadata = () => {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          isTracking = true;
+          requestAnimationFrame(processFrame);
+        };
+      } catch (err) {
+        alert('Помилка доступу до камери: ' + err.message);
+      }
+    });
+
+    function processFrame() {
+      if (!isTracking) return;
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const roiSize = 60;
+      const startX = (canvas.width - roiSize) / 2;
+      const startY = (canvas.height - roiSize) / 2;
+
+      const frameData = ctx.getImageData(startX, startY, roiSize, roiSize).data;
+      
+      let totalLuminance = 0;
+      const pixelCount = frameData.length / 4;
+
+      for (let i = 0; i < frameData.length; i += 4) {
+        const r = frameData[i];
+        const g = frameData[i + 1];
+        const b = frameData[i + 2];
+        totalLuminance += (0.299 * r + 0.587 * g + 0.114 * b);
+      }
+
+      const currentLuminance = totalLuminance / pixelCount;
+
+      if (!isLedOn) {
+        baseLuminance = baseLuminance * 0.9 + currentLuminance * 0.1;
+      }
+
+      const thresholdPercentage = parseFloat(thresholdInput.value) / 100;
+      const triggerThreshold = baseLuminance * (1 + thresholdPercentage) + 10;
+
+      if (currentLuminance > triggerThreshold && !isLedOn) {
+        isLedOn = true;
+        roi.classList.add('active');
+        handleFlash();
+      } else if (currentLuminance < triggerThreshold && isLedOn) {
+        isLedOn = false;
+        roi.classList.remove('active');
+      }
+
+      requestAnimationFrame(processFrame);
+    }
+
+    function handleFlash() {
+      const now = performance.now();
+      flashCount++;
+
+      if (lastFlashTime > 0) {
+        const deltaSeconds = (now - lastFlashTime) / 1000;
+        const impConstant = parseFloat(impConstantInput.value) || 6400;
+
+        const powerkW = 3600 / (impConstant * deltaSeconds);
+        const powerW = powerkW * 1000;
+
+        intervalVal.innerText = `${deltaSeconds.toFixed(2)} с (#${flashCount})`;
+        
+        if (powerkW >= 1) {
+          powerVal.innerText = `${powerkW.toFixed(2)} кВт`;
+        } else {
+          powerVal.innerText = `${Math.round(powerW)} Вт`;
+        }
+      } else {
+        intervalVal.innerText = `Чекаємо 2-й спалах...`;
+      }
+
+      lastFlashTime = now;
+    }
+  </script>
+</body>
+</html>
