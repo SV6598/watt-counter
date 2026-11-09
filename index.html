@@ -6,45 +6,47 @@
   <title>Watt-counter</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: space-between; min-height: 100vh; padding: 10px; max-width: 480px; margin: 0 auto; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; padding: 12px; max-width: 480px; margin: 0 auto; gap: 14px; }
     
-    h1 { font-size: 1.1rem; color: #38bdf8; font-weight: 700; text-align: center; margin-bottom: 6px; }
+    h1 { font-size: 1.3rem; color: #38bdf8; font-weight: 700; text-align: center; margin-top: 4px; }
     
-    /* Компактна зона камери */
-    .camera-container { position: relative; width: 100%; height: 180px; background: #000; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+    /* Вікно камери вгорі */
+    .camera-container { position: relative; width: 100%; height: 210px; background: #000; border-radius: 16px; overflow: hidden; box-shadow: 0 6px 20px rgba(0,0,0,0.6); }
     video { width: 100%; height: 100%; object-fit: cover; }
     
     /* Приціл ROI (45x45px) */
     .roi-target { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 45px; height: 45px; border: 2px stroke #ef4444; border-radius: 6px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); pointer-events: none; transition: border-color 0.1s; }
-    .roi-target.active { border-color: #22c55e; box-shadow: 0 0 12px #22c55e, 0 0 0 9999px rgba(0, 0, 0, 0.5); }
+    .roi-target.active { border-color: #22c55e; box-shadow: 0 0 16px #22c55e, 0 0 0 9999px rgba(0, 0, 0, 0.5); }
     
-    .controls { width: 100%; display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+    .controls { width: 100%; display: flex; flex-direction: column; gap: 14px; }
     
-    .btn-start { background: #0284c7; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; }
+    .btn-start { background: #0284c7; color: white; border: none; padding: 14px; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; }
     .btn-start:active { background: #0369a1; }
 
-    /* Пресети 3200 / 6400 */
-    .preset-group { display: flex; gap: 6px; align-items: center; justify-content: space-between; }
-    .preset-label { font-size: 0.8rem; color: #94a3b8; }
-    .preset-btns { display: flex; gap: 4px; }
-    .btn-preset { background: #334155; color: #f8fafc; border: 1px solid #475569; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
-    .btn-preset.active { background: #0284c7; border-color: #38bdf8; font-weight: bold; }
-    .imp-input { background: #0f172a; border: 1px solid #334155; color: #fff; padding: 4px 8px; border-radius: 6px; width: 75px; text-align: right; font-size: 0.85rem; }
+    /* Блок вибору імпульсів */
+    .preset-group { display: flex; gap: 8px; align-items: center; justify-content: space-between; background: #1e293b; padding: 10px 12px; border-radius: 12px; border: 1px solid #334155; }
+    .preset-label { font-size: 0.95rem; color: #94a3b8; font-weight: 500; }
+    .preset-btns { display: flex; gap: 6px; }
+    .btn-preset { background: #334155; color: #f8fafc; border: 1px solid #475569; padding: 8px 12px; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+    .btn-preset.active { background: #0284c7; border-color: #38bdf8; color: #fff; }
+    .imp-input { background: #0f172a; border: 1px solid #334155; color: #fff; padding: 8px; border-radius: 8px; width: 85px; text-align: right; font-size: 1rem; font-weight: bold; }
 
-    /* Повзунки */
-    .slider-group { display: flex; flex-direction: column; gap: 2px; }
-    .slider-header { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; }
-    input[type=range] { width: 100%; accent-color: #38bdf8; cursor: pointer; }
+    /* Повзунки з великими відступами */
+    .slider-group { display: flex; flex-direction: column; gap: 6px; background: #1e293b; padding: 12px; border-radius: 12px; border: 1px solid #334155; }
+    .slider-header { display: flex; justify-content: space-between; font-size: 0.95rem; color: #94a3b8; font-weight: 500; }
+    .slider-val { font-weight: bold; color: #38bdf8; }
+    input[type=range] { width: 100%; height: 8px; accent-color: #38bdf8; cursor: pointer; margin-top: 4px; }
     input[type=range]:disabled { opacity: 0.3; cursor: not-allowed; }
 
     /* Дашборд результатів */
-    .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 2px; }
-    .card { background: #1e293b; padding: 8px; border-radius: 8px; text-align: center; border: 1px solid #334155; }
-    .card-title { font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 2px; }
-    .card-value { font-size: 1.2rem; font-weight: bold; color: #38bdf8; }
+    .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .card { background: #1e293b; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #334155; }
+    .card-title { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; font-weight: 600; }
+    .card-value { font-size: 1.4rem; font-weight: bold; color: #38bdf8; }
     .card-value.highlight { color: #4ade80; }
 
-    .btn-reset { background: #334155; color: #94a3b8; font-size: 0.85rem; padding: 8px; border: none; border-radius: 8px; cursor: pointer; margin-top: 2px; }
+    /* Кнопка Reset */
+    .btn-reset { background: #334155; color: #cbd5e1; font-size: 1rem; font-weight: 600; padding: 12px; border: none; border-radius: 12px; cursor: pointer; margin-top: 2px; }
     .btn-reset:active { background: #475569; color: #fff; }
     
     canvas { display: none; }
@@ -63,7 +65,7 @@
     <button id="start-btn" class="btn-start">Увімкнути камеру</button>
 
     <div class="preset-group">
-      <span class="preset-label">Імпульсів (imp/кВт):</span>
+      <span class="preset-label">Imp/кВт·год:</span>
       <div class="preset-btns">
         <button type="button" class="btn-preset" onclick="setImp(3200, this)">3200</button>
         <button type="button" class="btn-preset active" onclick="setImp(6400, this)">6400</button>
@@ -71,22 +73,22 @@
       <input type="number" id="imp-constant" class="imp-input" value="6400">
     </div>
 
-    <!-- Повзунок Експозиції -->
+    <!-- Експозиція (з округленням до 0.1) -->
     <div class="slider-group">
       <div class="slider-header">
-        <span>Експозиція (затемнення):</span>
-        <span id="exposure-val">-1.0 EV</span>
+        <span>Експозиція:</span>
+        <span id="exposure-val" class="slider-val">-1.0 EV</span>
       </div>
-      <input type="range" id="exposure-input" min="-2.0" max="2.0" step="0.5" value="-1.0" disabled>
+      <input type="range" id="exposure-input" min="-2.0" max="2.0" step="0.1" value="-1.0" disabled>
     </div>
 
-    <!-- Повзунок Порогу -->
+    <!-- Поріг чутливості (крок 5%) -->
     <div class="slider-group">
       <div class="slider-header">
-        <span>Поріг чутливості:</span>
-        <span id="threshold-val">25%</span>
+        <span>Поріг спалаху:</span>
+        <span id="threshold-val" class="slider-val">25%</span>
       </div>
-      <input type="range" id="threshold-input" min="5" max="100" value="25">
+      <input type="range" id="threshold-input" min="5" max="100" step="5" value="25">
     </div>
 
     <div class="dashboard">
@@ -127,12 +129,12 @@
     let flashCount = 0;
     let videoTrack = null;
 
-    // Синхронізація слайдера порогу
+    // Синхронізація слайдера порогу (крок 5%)
     thresholdInput.addEventListener('input', (e) => {
       thresholdVal.innerText = `${e.target.value}%`;
     });
 
-    // Швидкі кнопки 3200 / 6400
+    // Кнопки швидкого вибору 3200 / 6400
     function setImp(val, btn) {
       impConstantInput.value = val;
       document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
@@ -164,7 +166,6 @@
       }
     });
 
-    // Налаштування та керування експозицією
     function setupExposureControl() {
       if (!videoTrack || typeof videoTrack.getCapabilities !== 'function') {
         exposureVal.innerText = '(не підтрим.)';
@@ -177,19 +178,20 @@
         exposureInput.disabled = false;
         exposureInput.min = capabilities.exposureCompensation.min;
         exposureInput.max = capabilities.exposureCompensation.max;
-        exposureInput.step = capabilities.exposureCompensation.step || 0.1;
+        exposureInput.step = 0.1;
         
-        // Початкове притемнення кадру (-1.0 EV або мінімум пристрою)
         const initialVal = Math.max(capabilities.exposureCompensation.min, -1.0);
-        exposureInput.value = initialVal;
-        exposureVal.innerText = `${initialVal} EV`;
+        const roundedInitial = Number(initialVal).toFixed(1);
+        
+        exposureInput.value = roundedInitial;
+        exposureVal.innerText = `${roundedInitial > 0 ? '+' : ''}${roundedInitial} EV`;
 
-        applyExposure(initialVal);
+        applyExposure(parseFloat(roundedInitial));
 
         exposureInput.addEventListener('input', (e) => {
-          const val = parseFloat(e.target.value);
+          const val = parseFloat(e.target.value).toFixed(1);
           exposureVal.innerText = `${val > 0 ? '+' : ''}${val} EV`;
-          applyExposure(val);
+          applyExposure(parseFloat(val));
         });
       } else {
         exposureVal.innerText = '(не підтрим.)';
@@ -280,4 +282,3 @@
   </script>
 </body>
 </html>
-
