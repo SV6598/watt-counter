@@ -44,6 +44,7 @@
     .card-title { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; font-weight: 600; }
     .card-value { font-size: 1.4rem; font-weight: bold; color: #38bdf8; }
     .card-value.highlight { color: #4ade80; }
+    .card-subtext { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
 
     /* Кнопка Reset */
     .btn-reset { background: #334155; color: #cbd5e1; font-size: 1rem; font-weight: 600; padding: 12px; border: none; border-radius: 12px; cursor: pointer; margin-top: 2px; }
@@ -73,7 +74,7 @@
       <input type="number" id="imp-constant" class="imp-input" value="6400">
     </div>
 
-    <!-- Експозиція (з округленням до 0.1) -->
+    <!-- Експозиція -->
     <div class="slider-group">
       <div class="slider-header">
         <span>Експозиція:</span>
@@ -82,7 +83,7 @@
       <input type="range" id="exposure-input" min="-2.0" max="2.0" step="0.1" value="-1.0" disabled>
     </div>
 
-    <!-- Поріг чутливості (крок 5%) -->
+    <!-- Поріг спалаху -->
     <div class="slider-group">
       <div class="slider-header">
         <span>Поріг спалаху:</span>
@@ -95,6 +96,7 @@
       <div class="card">
         <div class="card-title">Поточне навантаження</div>
         <div id="power-val" class="card-value highlight">0.00 кВт</div>
+        <div id="fps-val" class="card-subtext">Камера: -- FPS</div>
       </div>
       <div class="card">
         <div class="card-title">Інтервал / Блимання</div>
@@ -116,6 +118,7 @@
     const resetBtn = document.getElementById('reset-btn');
     const powerVal = document.getElementById('power-val');
     const intervalVal = document.getElementById('interval-val');
+    const fpsVal = document.getElementById('fps-val');
     const impConstantInput = document.getElementById('imp-constant');
     const thresholdInput = document.getElementById('threshold-input');
     const thresholdVal = document.getElementById('threshold-val');
@@ -129,12 +132,14 @@
     let flashCount = 0;
     let videoTrack = null;
 
-    // Синхронізація слайдера порогу (крок 5%)
+    // Лічильник FPS
+    let frameCounter = 0;
+    let lastFpsTime = performance.now();
+
     thresholdInput.addEventListener('input', (e) => {
       thresholdVal.innerText = `${e.target.value}%`;
     });
 
-    // Кнопки швидкого вибору 3200 / 6400
     function setImp(val, btn) {
       impConstantInput.value = val;
       document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
@@ -142,12 +147,24 @@
     }
 
     startBtn.addEventListener('click', async () => {
+      // Запит камери з ідеальною частотою 60 FPS
+      const constraints = {
+        video: {
+          facingMode: { exact: 'environment' },
+          frameRate: { ideal: 60, min: 30 }
+        }
+      };
+
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { exact: 'environment' } }
-        }).catch(() => {
-          return navigator.mediaDevices.getUserMedia({ video: true });
-        });
+        let stream;
+        try {
+          stream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch {
+          // Фолбек для вебкамер ПК або стандартного режиму
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { frameRate: { ideal: 60, min: 30 } }
+          });
+        }
 
         video.srcObject = stream;
         startBtn.style.display = 'none';
@@ -215,6 +232,15 @@
 
     function processFrame() {
       if (!isTracking) return;
+
+      // Підрахунок реальних FPS
+      frameCounter++;
+      const nowFps = performance.now();
+      if (nowFps - lastFpsTime >= 1000) {
+        fpsVal.innerText = `Камера: ${frameCounter} FPS`;
+        frameCounter = 0;
+        lastFpsTime = nowFps;
+      }
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
