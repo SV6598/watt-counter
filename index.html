@@ -6,7 +6,7 @@
   <title>Watt-counter</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; padding: 12px; max-width: 480px; margin: 0 auto; gap: 14px; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; min-height: 100vh; padding: 12px; max-width: 480px; margin: 0 auto; gap: 12px; }
     
     h1 { font-size: 1.3rem; color: #38bdf8; font-weight: 700; text-align: center; margin-top: 4px; }
     
@@ -18,7 +18,7 @@
     .roi-target { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 45px; height: 45px; border: 2px stroke #ef4444; border-radius: 6px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); pointer-events: none; transition: border-color 0.1s; }
     .roi-target.active { border-color: #22c55e; box-shadow: 0 0 16px #22c55e, 0 0 0 9999px rgba(0, 0, 0, 0.5); }
     
-    .controls { width: 100%; display: flex; flex-direction: column; gap: 14px; }
+    .controls { width: 100%; display: flex; flex-direction: column; gap: 12px; }
     
     .btn-start { background: #0284c7; color: white; border: none; padding: 14px; border-radius: 12px; font-weight: bold; font-size: 1.1rem; cursor: pointer; }
     .btn-start:active { background: #0369a1; }
@@ -31,7 +31,7 @@
     .btn-preset.active { background: #0284c7; border-color: #38bdf8; color: #fff; }
     .imp-input { background: #0f172a; border: 1px solid #334155; color: #fff; padding: 8px; border-radius: 8px; width: 85px; text-align: right; font-size: 1rem; font-weight: bold; }
 
-    /* Повзунки з великими відступами */
+    /* Повзунки */
     .slider-group { display: flex; flex-direction: column; gap: 6px; background: #1e293b; padding: 12px; border-radius: 12px; border: 1px solid #334155; }
     .slider-header { display: flex; justify-content: space-between; font-size: 0.95rem; color: #94a3b8; font-weight: 500; }
     .slider-val { font-weight: bold; color: #38bdf8; }
@@ -39,12 +39,17 @@
     input[type=range]:disabled { opacity: 0.3; cursor: not-allowed; }
 
     /* Дашборд результатів */
-    .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .card { background: #1e293b; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #334155; }
-    .card-title { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; font-weight: 600; }
-    .card-value { font-size: 1.4rem; font-weight: bold; color: #38bdf8; }
-    .card-value.highlight { color: #4ade80; }
-    .card-subtext { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
+    .dashboard { display: flex; flex-direction: column; gap: 10px; }
+    
+    /* Головний блок: Поточне навантаження (на всю ширину) */
+    .card-main { background: #1e293b; padding: 16px 18px; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #334155; }
+    .card-main-title { font-size: 0.95rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .card-main-value { font-size: 2.2rem; font-weight: 800; color: #4ade80; }
+
+    /* Другорядний блок: Інтервал та блимання */
+    .card-sub { background: #0f172a; padding: 10px 14px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #1e293b; }
+    .card-sub-title { font-size: 0.8rem; color: #64748b; font-weight: 500; }
+    .card-sub-value { font-size: 0.95rem; font-weight: 600; color: #38bdf8; }
 
     /* Кнопка Reset */
     .btn-reset { background: #334155; color: #cbd5e1; font-size: 1rem; font-weight: 600; padding: 12px; border: none; border-radius: 12px; cursor: pointer; margin-top: 2px; }
@@ -93,14 +98,16 @@
     </div>
 
     <div class="dashboard">
-      <div class="card">
-        <div class="card-title">Поточне навантаження</div>
-        <div id="power-val" class="card-value highlight">0.00 кВт</div>
-        <div id="fps-val" class="card-subtext">Камера: -- FPS</div>
+      <!-- Навантаження на всю ширину -->
+      <div class="card-main">
+        <span class="card-main-title">Поточне<br>навантаження</span>
+        <span id="power-val" class="card-main-value">0 Вт</span>
       </div>
-      <div class="card">
-        <div class="card-title">Інтервал / Блимання</div>
-        <div id="interval-val" class="card-value">0.00 с</div>
+
+      <!-- Інтервал нижче, дрібнішим шрифтом -->
+      <div class="card-sub">
+        <span class="card-sub-title">Інтервал / Блимання:</span>
+        <span id="interval-val" class="card-sub-value">0.00 с</span>
       </div>
     </div>
 
@@ -118,7 +125,6 @@
     const resetBtn = document.getElementById('reset-btn');
     const powerVal = document.getElementById('power-val');
     const intervalVal = document.getElementById('interval-val');
-    const fpsVal = document.getElementById('fps-val');
     const impConstantInput = document.getElementById('imp-constant');
     const thresholdInput = document.getElementById('threshold-input');
     const thresholdVal = document.getElementById('threshold-val');
@@ -132,10 +138,6 @@
     let flashCount = 0;
     let videoTrack = null;
 
-    // Лічильник FPS
-    let frameCounter = 0;
-    let lastFpsTime = performance.now();
-
     thresholdInput.addEventListener('input', (e) => {
       thresholdVal.innerText = `${e.target.value}%`;
     });
@@ -147,7 +149,6 @@
     }
 
     startBtn.addEventListener('click', async () => {
-      // Запит камери з ідеальною частотою 60 FPS
       const constraints = {
         video: {
           facingMode: { exact: 'environment' },
@@ -160,7 +161,6 @@
         try {
           stream = await navigator.mediaDevices.getUserMedia(constraints);
         } catch {
-          // Фолбек для вебкамер ПК або стандартного режиму
           stream = await navigator.mediaDevices.getUserMedia({
             video: { frameRate: { ideal: 60, min: 30 } }
           });
@@ -226,21 +226,12 @@
     resetBtn.addEventListener('click', () => {
       flashCount = 0;
       lastFlashTime = 0;
-      powerVal.innerText = '0.00 кВт';
+      powerVal.innerText = '0 Вт';
       intervalVal.innerText = '0.00 с';
     });
 
     function processFrame() {
       if (!isTracking) return;
-
-      // Підрахунок реальних FPS
-      frameCounter++;
-      const nowFps = performance.now();
-      if (nowFps - lastFpsTime >= 1000) {
-        fpsVal.innerText = `Камера: ${frameCounter} FPS`;
-        frameCounter = 0;
-        lastFpsTime = nowFps;
-      }
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
