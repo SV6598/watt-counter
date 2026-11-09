@@ -6,31 +6,45 @@
   <title>Watt-counter</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 12px; }
-    h1 { font-size: 1.4rem; margin-bottom: 12px; text-align: center; color: #38bdf8; font-weight: 700; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0f172a; color: #f8fafc; display: flex; flex-direction: column; align-items: center; justify-content: space-between; min-height: 100vh; padding: 10px; max-width: 480px; margin: 0 auto; }
     
-    .camera-container { position: relative; width: 100%; max-width: 400px; aspect-ratio: 3/4; background: #000; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
+    h1 { font-size: 1.1rem; color: #38bdf8; font-weight: 700; text-align: center; margin-bottom: 6px; }
+    
+    /* Компактна зона камери */
+    .camera-container { position: relative; width: 100%; height: 180px; background: #000; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
     video { width: 100%; height: 100%; object-fit: cover; }
     
-    /* Приціл ROI (Збільшено на 40%: 60px -> 84px) */
-    .roi-target { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 84px; height: 84px; border: 2px stroke #ef4444; border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45); pointer-events: none; transition: border-color 0.1s; }
-    .roi-target.active { border-color: #22c55e; box-shadow: 0 0 15px #22c55e, 0 0 0 9999px rgba(0, 0, 0, 0.45); }
+    /* Приціл ROI (45x45px) */
+    .roi-target { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 45px; height: 45px; border: 2px stroke #ef4444; border-radius: 6px; box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5); pointer-events: none; transition: border-color 0.1s; }
+    .roi-target.active { border-color: #22c55e; box-shadow: 0 0 12px #22c55e, 0 0 0 9999px rgba(0, 0, 0, 0.5); }
     
-    .controls { width: 100%; max-width: 400px; background: #1e293b; border-radius: 16px; padding: 16px; margin-top: 12px; display: flex; flex-direction: column; gap: 12px; }
-    .input-group { display: flex; justify-content: space-between; align-items: center; }
-    label { font-size: 0.9rem; color: #94a3b8; }
-    input { background: #0f172a; border: 1px solid #334155; color: #fff; padding: 8px 12px; border-radius: 8px; width: 100px; text-align: right; font-size: 1rem; }
+    .controls { width: 100%; display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
     
-    .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
-    .card { background: #0f172a; padding: 12px; border-radius: 12px; text-align: center; border: 1px solid #334155; }
-    .card-title { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 4px; }
-    .card-value { font-size: 1.4rem; font-weight: bold; color: #38bdf8; }
-    .card-value.highlight { color: #4ade80; }
-    
-    button { background: #0284c7; color: white; border: none; padding: 12px; border-radius: 8px; font-weight: bold; font-size: 1rem; cursor: pointer; transition: background 0.2s; }
-    button:active { background: #0369a1; }
+    .btn-start { background: #0284c7; color: white; border: none; padding: 10px; border-radius: 8px; font-weight: bold; font-size: 0.95rem; cursor: pointer; }
+    .btn-start:active { background: #0369a1; }
 
-    .btn-reset { background: #334155; color: #94a3b8; font-size: 0.9rem; padding: 10px; margin-top: 4px; }
+    /* Пресети 3200 / 6400 */
+    .preset-group { display: flex; gap: 6px; align-items: center; justify-content: space-between; }
+    .preset-label { font-size: 0.8rem; color: #94a3b8; }
+    .preset-btns { display: flex; gap: 4px; }
+    .btn-preset { background: #334155; color: #f8fafc; border: 1px solid #475569; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; cursor: pointer; }
+    .btn-preset.active { background: #0284c7; border-color: #38bdf8; font-weight: bold; }
+    .imp-input { background: #0f172a; border: 1px solid #334155; color: #fff; padding: 4px 8px; border-radius: 6px; width: 75px; text-align: right; font-size: 0.85rem; }
+
+    /* Повзунки */
+    .slider-group { display: flex; flex-direction: column; gap: 2px; }
+    .slider-header { display: flex; justify-content: space-between; font-size: 0.8rem; color: #94a3b8; }
+    input[type=range] { width: 100%; accent-color: #38bdf8; cursor: pointer; }
+    input[type=range]:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* Дашборд результатів */
+    .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 2px; }
+    .card { background: #1e293b; padding: 8px; border-radius: 8px; text-align: center; border: 1px solid #334155; }
+    .card-title { font-size: 0.65rem; color: #94a3b8; text-transform: uppercase; margin-bottom: 2px; }
+    .card-value { font-size: 1.2rem; font-weight: bold; color: #38bdf8; }
+    .card-value.highlight { color: #4ade80; }
+
+    .btn-reset { background: #334155; color: #94a3b8; font-size: 0.85rem; padding: 8px; border: none; border-radius: 8px; cursor: pointer; margin-top: 2px; }
     .btn-reset:active { background: #475569; color: #fff; }
     
     canvas { display: none; }
@@ -46,16 +60,33 @@
   </div>
 
   <div class="controls">
-    <button id="start-btn">Увімкнути камеру</button>
-    
-    <div class="input-group">
-      <label for="imp-constant">Константа (imp/кВт·год):</label>
-      <input type="number" id="imp-constant" value="6400">
+    <button id="start-btn" class="btn-start">Увімкнути камеру</button>
+
+    <div class="preset-group">
+      <span class="preset-label">Імпульсів (imp/кВт):</span>
+      <div class="preset-btns">
+        <button type="button" class="btn-preset" onclick="setImp(3200, this)">3200</button>
+        <button type="button" class="btn-preset active" onclick="setImp(6400, this)">6400</button>
+      </div>
+      <input type="number" id="imp-constant" class="imp-input" value="6400">
     </div>
 
-    <div class="input-group">
-      <label for="threshold-input">Поріг спалаху (%):</label>
-      <input type="number" id="threshold-input" value="25" min="5" max="100">
+    <!-- Повзунок Експозиції -->
+    <div class="slider-group">
+      <div class="slider-header">
+        <span>Експозиція (затемнення):</span>
+        <span id="exposure-val">-1.0 EV</span>
+      </div>
+      <input type="range" id="exposure-input" min="-2.0" max="2.0" step="0.5" value="-1.0" disabled>
+    </div>
+
+    <!-- Повзунок Порогу -->
+    <div class="slider-group">
+      <div class="slider-header">
+        <span>Поріг чутливості:</span>
+        <span id="threshold-val">25%</span>
+      </div>
+      <input type="range" id="threshold-input" min="5" max="100" value="25">
     </div>
 
     <div class="dashboard">
@@ -85,12 +116,28 @@
     const intervalVal = document.getElementById('interval-val');
     const impConstantInput = document.getElementById('imp-constant');
     const thresholdInput = document.getElementById('threshold-input');
+    const thresholdVal = document.getElementById('threshold-val');
+    const exposureInput = document.getElementById('exposure-input');
+    const exposureVal = document.getElementById('exposure-val');
 
     let isTracking = false;
     let lastFlashTime = 0;
     let baseLuminance = 0;
     let isLedOn = false;
     let flashCount = 0;
+    let videoTrack = null;
+
+    // Синхронізація слайдера порогу
+    thresholdInput.addEventListener('input', (e) => {
+      thresholdVal.innerText = `${e.target.value}%`;
+    });
+
+    // Швидкі кнопки 3200 / 6400
+    function setImp(val, btn) {
+      impConstantInput.value = val;
+      document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
 
     startBtn.addEventListener('click', async () => {
       try {
@@ -102,6 +149,10 @@
 
         video.srcObject = stream;
         startBtn.style.display = 'none';
+
+        videoTrack = stream.getVideoTracks()[0];
+        setupExposureControl();
+
         video.onloadedmetadata = () => {
           canvas.width = video.videoWidth;
           canvas.height = video.videoHeight;
@@ -112,6 +163,46 @@
         alert('Помилка доступу до камери: ' + err.message);
       }
     });
+
+    // Налаштування та керування експозицією
+    function setupExposureControl() {
+      if (!videoTrack || typeof videoTrack.getCapabilities !== 'function') {
+        exposureVal.innerText = '(не підтрим.)';
+        return;
+      }
+
+      const capabilities = videoTrack.getCapabilities();
+
+      if (capabilities.exposureCompensation) {
+        exposureInput.disabled = false;
+        exposureInput.min = capabilities.exposureCompensation.min;
+        exposureInput.max = capabilities.exposureCompensation.max;
+        exposureInput.step = capabilities.exposureCompensation.step || 0.1;
+        
+        // Початкове притемнення кадру (-1.0 EV або мінімум пристрою)
+        const initialVal = Math.max(capabilities.exposureCompensation.min, -1.0);
+        exposureInput.value = initialVal;
+        exposureVal.innerText = `${initialVal} EV`;
+
+        applyExposure(initialVal);
+
+        exposureInput.addEventListener('input', (e) => {
+          const val = parseFloat(e.target.value);
+          exposureVal.innerText = `${val > 0 ? '+' : ''}${val} EV`;
+          applyExposure(val);
+        });
+      } else {
+        exposureVal.innerText = '(не підтрим.)';
+      }
+    }
+
+    function applyExposure(value) {
+      if (videoTrack && typeof videoTrack.applyConstraints === 'function') {
+        videoTrack.applyConstraints({
+          advanced: [{ exposureCompensation: value }]
+        }).catch(err => console.log('Exposure error:', err));
+      }
+    }
 
     resetBtn.addEventListener('click', () => {
       flashCount = 0;
@@ -125,8 +216,7 @@
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      // Оновлений розмір зони аналізу ROI (84x84px)
-      const roiSize = 84;
+      const roiSize = 45;
       const startX = (canvas.width - roiSize) / 2;
       const startY = (canvas.height - roiSize) / 2;
 
@@ -139,17 +229,17 @@
         const r = frameData[i];
         const g = frameData[i + 1];
         const b = frameData[i + 2];
-        totalLuminance += (0.299 * r + 0.587 * g + 0.114 * b);
+        totalLuminance += (0.5 * r + 0.5 * g);
       }
 
       const currentLuminance = totalLuminance / pixelCount;
 
       if (!isLedOn) {
-        baseLuminance = baseLuminance * 0.9 + currentLuminance * 0.1;
+        baseLuminance = baseLuminance * 0.92 + currentLuminance * 0.08;
       }
 
       const thresholdPercentage = parseFloat(thresholdInput.value) / 100;
-      const triggerThreshold = baseLuminance * (1 + thresholdPercentage) + 10;
+      const triggerThreshold = baseLuminance * (1 + thresholdPercentage) + 8;
 
       if (currentLuminance > triggerThreshold && !isLedOn) {
         isLedOn = true;
@@ -190,3 +280,4 @@
   </script>
 </body>
 </html>
+
